@@ -1,0 +1,35 @@
+replicaCount: 1
+
+namespace: testin
+
+image:
+  repository: databasus/databasus
+  tag: "v3.49.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 4005
+  targetPort: 4005
+
+storage:
+  enabled: true
+  storageClass: microk8s-hostpath
+  size: 5Gi
+
+ingress:
+  enabled: true
+  className: nginx
+
+  host: testin.192.168.254.104.nip.io
+
+  tls: false
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+  limits:
+    cpu: "1"
+    memory: 2Gi
