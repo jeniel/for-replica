@@ -2,58 +2,61 @@ apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "autobase.fullname" . }}
 
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
 
   selector:
     matchLabels:
-      app: {{ .Release.Name }}
+      app: {{ include "autobase.fullname" . }}
 
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}
+        app: {{ include "autobase.fullname" . }}
 
     spec:
+      serviceAccountName: {{ include "autobase.serviceAccountName" . }}
+
       containers:
-        - name: databasus
+        - name: console
 
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+
           imagePullPolicy: {{ .Values.image.pullPolicy }}
 
           ports:
-            - name: http
-              containerPort: {{ .Values.service.targetPort }}
-              protocol: TCP
+            - containerPort: 80
+
+          env:
+            - name: PG_CONSOLE_DOCKER_IMAGE
+              value: {{ .Values.automationImage }}
+
+            - name: PG_CONSOLE_AUTHORIZATION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "autobase.fullname" . }}
+                  key: AUTH_TOKEN
 
           volumeMounts:
-            - name: data
-              mountPath: /databasus-data
+            - name: postgres
+              mountPath: /var/lib/postgresql
 
-          resources:
-{{ toYaml .Values.resources | indent 12 }}
+            - name: ansible
+              mountPath: /tmp/ansible
+
+            - name: docker
+              mountPath: /var/run/docker.sock
 
       volumes:
-        - name: data
+        - name: postgres
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-data
----
-apiVersion: v1
-kind: Service
+            claimName: {{ include "autobase.fullname" . }}
 
-metadata:
-  name: {{ .Release.Name }}
+        - name: ansible
+          emptyDir: {}
 
-spec:
-  type: {{ .Values.service.type }}
-
-  selector:
-    app: {{ .Release.Name }}
-
-  ports:
-    - name: http
-      port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.targetPort }}
-      protocol: TCP
+        - name: docker
+          hostPath:
+            path: {{ .Values.dockerSocket.hostPath }}
